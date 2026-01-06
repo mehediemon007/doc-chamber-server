@@ -41,4 +41,13 @@ export class PatientsService {
       password: undefined,
     };
   }
+
+  // Add this inside the PatientsService class
+  async findOneByPhone(phone: string): Promise<Patient | null> {
+    return await this.patientRepository
+      .createQueryBuilder('patient')
+      .addSelect('patient.password') // This allows us to see the hashed password for comparison
+      .where('patient.phone = :phone', { phone })
+      .getOne();
+  }
 }

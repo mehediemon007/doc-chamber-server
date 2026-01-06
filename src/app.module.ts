@@ -3,6 +3,7 @@ import { ConfigModule } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Patient } from './modules/patients/patient.entity';
 import { PatientsModule } from './modules/patients/patients.module';
+import { AuthModule } from './modules/auth/auth.module';
 
 @Module({
   imports: [
@@ -18,6 +19,7 @@ import { PatientsModule } from './modules/patients/patients.module';
       synchronize: true, // Auto-creates table structure (Dev only)
     }),
     PatientsModule,
+    AuthModule,
   ],
 })
 export class AppModule {}
