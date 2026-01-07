@@ -2,8 +2,14 @@ import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Patient } from './modules/patients/patient.entity';
+import { Doctor } from './modules/doctors/entities/doctor.entity';
+import { Chamber } from './modules/chambers/entities/chamber.entity';
+import { Booking } from './modules/bookings/entities/booking.entity';
+import { DoctorsModule } from './modules/doctors/doctors.module';
 import { PatientsModule } from './modules/patients/patients.module';
 import { AuthModule } from './modules/auth/auth.module';
+import { ChambersModule } from './modules/chambers/chambers.module';
+import { BookingsModule } from './modules/bookings/bookings.module';
 
 @Module({
   imports: [
@@ -15,11 +21,14 @@ import { AuthModule } from './modules/auth/auth.module';
       username: process.env.DB_USERNAME || 'postgres',
       password: process.env.DB_PASSWORD || 'password',
       database: process.env.DB_NAME || 'pulse_chamber_db',
-      entities: [Patient], // Add your entities here
+      entities: [Doctor, Patient, Chamber, Booking], // Add your entities here
       synchronize: true, // Auto-creates table structure (Dev only)
     }),
+    DoctorsModule,
     PatientsModule,
     AuthModule,
+    ChambersModule,
+    BookingsModule,
   ],
 })
 export class AppModule {}

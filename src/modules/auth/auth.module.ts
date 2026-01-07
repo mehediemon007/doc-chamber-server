@@ -1,20 +1,22 @@
 import { Module } from '@nestjs/common';
 import { JwtModule } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
-import { PatientsModule } from '../patients/patients.module';
 import { AuthService } from './auth.service';
 import { AuthController } from './auth.controller';
+import { JwtStrategy } from './jwt.strategy';
+import { PatientsModule } from '../patients/patients.module';
 
 @Module({
   imports: [
-    PatientsModule, // To find the patient in the DB
+    PatientsModule,
     PassportModule,
     JwtModule.register({
-      secret: 'MY_SECRET_KEY_123', // In production, use .env
-      signOptions: { expiresIn: '7d' }, // Patient stays logged in for 7 days
+      secret: 'SUPER_SECRET_KEY',
+      signOptions: { expiresIn: '1d' }, // Token lasts 1 day
     }),
   ],
-  providers: [AuthService],
+  providers: [AuthService, JwtStrategy],
   controllers: [AuthController],
+  exports: [AuthService], // Export if other services need to generate tokens
 })
 export class AuthModule {}
