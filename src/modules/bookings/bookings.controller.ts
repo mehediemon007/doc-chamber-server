@@ -1,4 +1,12 @@
-import { Controller, Post, Body, UseGuards, Request } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  UseGuards,
+  Request,
+  Param,
+} from '@nestjs/common';
 import { BookingsService } from './bookings.service';
 import { CreateBookingDto } from './dto/create-booking.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
@@ -24,5 +32,13 @@ export class BookingsController {
   ) {
     // Now TS knows req.user.userId is a string!
     return this.bookingsService.create(createBookingDto, req.user.userId);
+  }
+
+  // src/modules/bookings/bookings.controller.ts
+
+  @Get('queue/:chamberId')
+  @UseGuards(JwtAuthGuard) // If you want to restrict this to Doctors
+  async getQueue(@Param('chamberId') chamberId: string) {
+    return this.bookingsService.getDailyQueue(chamberId);
   }
 }

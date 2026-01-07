@@ -5,7 +5,7 @@ import {
   ManyToOne,
   CreateDateColumn,
 } from 'typeorm';
-import { Patient } from '../../patients/patient.entity';
+import { Patient } from '../../patients/entities/patient.entity';
 import { Chamber } from 'src/modules/chambers/entities/chamber.entity';
 
 @Entity('bookings')

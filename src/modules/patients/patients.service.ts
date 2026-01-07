@@ -1,7 +1,7 @@
 import { Injectable, ConflictException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { Patient } from './patient.entity';
+import { Patient } from './entities/patient.entity';
 import { SignupDto } from './dto/signup.dto';
 import * as bcrypt from 'bcrypt';
 
