@@ -5,7 +5,11 @@ export class CreateBookingDto {
   @IsNotEmpty()
   chamberId: string;
 
+  /**
+   * Must be in YYYY-MM-DD format.
+   * Example: "2026-01-15"
+   */
   @IsDateString()
   @IsNotEmpty()
-  bookingDate: string; // Format: "2026-01-07"
+  bookingDate: string;
 }

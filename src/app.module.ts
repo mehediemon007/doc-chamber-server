@@ -11,6 +11,7 @@ import { AuthModule } from './modules/auth/auth.module';
 import { ChambersModule } from './modules/chambers/chambers.module';
 import { BookingsModule } from './modules/bookings/bookings.module';
 import { MedicalRecord } from './modules/patients/entities/medical-record.entity';
+import { User } from './modules/users/entities/user.entity';
 
 @Module({
   imports: [
@@ -22,7 +23,7 @@ import { MedicalRecord } from './modules/patients/entities/medical-record.entity
       username: process.env.DB_USERNAME || 'postgres',
       password: process.env.DB_PASSWORD || 'password',
       database: process.env.DB_NAME || 'pulse_chamber_db',
-      entities: [Doctor, Patient, Chamber, Booking, MedicalRecord], // Add your entities here
+      entities: [Doctor, Patient, User, Chamber, Booking, MedicalRecord], // Add your entities here
       synchronize: true, // Auto-creates table structure (Dev only)
     }),
     DoctorsModule,

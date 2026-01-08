@@ -4,13 +4,13 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, DataSource, FindOptionsWhere } from 'typeorm'; // Added FindOptionsWhere
+import { Repository, DataSource } from 'typeorm';
 import { Patient } from '../patients/entities/patient.entity';
 import { Booking } from './entities/booking.entity';
 import { Chamber } from '../chambers/entities/chamber.entity';
 import { CreateBookingDto } from './dto/create-booking.dto';
 
-// Strict interface for results
+// Strict interface for results to ensure type safety in mapping
 interface BookingWithPatientHistory extends Booking {
   patient: Patient;
 }
@@ -29,12 +29,23 @@ export class BookingsService {
     return new Date().toLocaleDateString('en-CA');
   }
 
+  /**
+   * ATOMIC CREATE
+   */
   async create(dto: CreateBookingDto, patientId: string) {
     const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.connect();
     await queryRunner.startTransaction();
 
     try {
+      const patientExists = await queryRunner.manager.findOne(Patient, {
+        where: { id: patientId },
+      });
+
+      if (!patientExists) {
+        throw new BadRequestException(`Patient record not found.`);
+      }
+
       const chamber = await queryRunner.manager.findOne(Chamber, {
         where: { id: dto.chamberId },
         lock: { mode: 'pessimistic_write' },
@@ -42,12 +53,24 @@ export class BookingsService {
 
       if (!chamber) throw new NotFoundException('Chamber not found');
 
-      if (!chamber.isBookingOpen) {
-        throw new BadRequestException('Bookings are currently closed.');
+      const isForToday = dto.bookingDate === this.getTodayDate();
+      let nextSerial: number;
+
+      if (isForToday) {
+        nextSerial = (chamber.totalBooked || 0) + 1;
+        chamber.totalBooked = nextSerial;
+        await queryRunner.manager.save(Chamber, chamber);
+      } else {
+        const count = await queryRunner.manager.count(Booking, {
+          where: {
+            chamber: { id: dto.chamberId },
+            bookingDate: dto.bookingDate,
+          },
+        });
+        nextSerial = count + 1;
       }
 
-      const isExtra = chamber.totalBooked >= chamber.maxPatients;
-      const nextSerial = chamber.totalBooked + 1;
+      const isExtra = nextSerial > chamber.maxPatients;
 
       const booking = queryRunner.manager.create(Booking, {
         serialNumber: nextSerial,
@@ -57,16 +80,11 @@ export class BookingsService {
         chamber: { id: dto.chamberId } as Chamber,
       });
 
-      chamber.totalBooked = nextSerial;
-      await queryRunner.manager.save(Chamber, chamber);
       const savedBooking = await queryRunner.manager.save(Booking, booking);
-
       await queryRunner.commitTransaction();
 
       return {
-        message: isExtra
-          ? 'Booking confirmed as extra serial'
-          : 'Booking successful',
+        message: isExtra ? 'Booking confirmed as extra' : 'Booking successful',
         data: savedBooking,
       };
     } catch (err) {
@@ -77,31 +95,17 @@ export class BookingsService {
     }
   }
 
-  // FIXED: Added FindOptionsWhere to avoid 'as any' on the date string
-  async findAllByChamber(chamberId: string, date: string) {
-    const where: FindOptionsWhere<Booking> = {
-      chamber: { id: chamberId },
-      bookingDate: date,
-    };
-
-    return this.bookingRepository.find({
-      where,
-      relations: ['patient'],
-      order: { serialNumber: 'ASC' },
-    });
-  }
-
-  // FIXED: Removed 'as any' and implemented null-safe mapping
+  /**
+   * MULTI-TENANCY VIEW: Doctor/Staff only sees their own chamber's queue
+   */
   async getDailyQueue(chamberId: string) {
     const today = this.getTodayDate();
 
-    const where: FindOptionsWhere<Booking> = {
-      chamber: { id: chamberId },
-      bookingDate: today,
-    };
-
     const bookings = await this.bookingRepository.find({
-      where,
+      where: {
+        chamber: { id: chamberId }, // Filter by Doctor's Chamber ID
+        bookingDate: today,
+      },
       relations: {
         patient: {
           medicalRecords: true,
@@ -110,18 +114,39 @@ export class BookingsService {
       order: { serialNumber: 'ASC' },
     });
 
-    // Map using the strict interface
-    return (bookings as BookingWithPatientHistory[]).map((b) => {
-      const historyCount = b.patient.medicalRecords?.length ?? 0;
+    return (bookings as BookingWithPatientHistory[]).map((b) => ({
+      serial: b.serialNumber,
+      patientName: b.patient.fullName,
+      status: b.status,
+      historyCount: b.patient.medicalRecords?.length ?? 0,
+      phone: b.patient.phone,
+      patientId: b.patient.id,
+    }));
+  }
 
-      return {
-        serial: b.serialNumber,
-        patientName: b.patient.fullName ?? 'Unknown Patient',
-        status: b.status,
-        hasPreviousHistory: historyCount > 0,
-        historyCount: historyCount,
-        phone: b.patient.phone ?? 'No Phone',
-      };
+  /**
+   * DOCTOR VIEW: See all unique patients that belong to this chamber
+   */
+  async getChamberPatients(chamberId: string) {
+    // This query finds all patients who have at least one booking in this chamber
+    const bookings = await this.bookingRepository.find({
+      where: { chamber: { id: chamberId } },
+      relations: ['patient'],
+      select: {
+        id: true,
+        patient: {
+          id: true,
+          fullName: true,
+          phone: true,
+        },
+      },
     });
+
+    // Remove duplicates from the list to show unique patients
+    const uniquePatients = Array.from(
+      new Map(bookings.map((b) => [b.patient.id, b.patient])).values(),
+    );
+
+    return uniquePatients;
   }
 }

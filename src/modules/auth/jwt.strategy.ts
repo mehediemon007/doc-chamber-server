@@ -1,12 +1,14 @@
 import { ExtractJwt, Strategy } from 'passport-jwt';
 import { PassportStrategy } from '@nestjs/passport';
 import { Injectable } from '@nestjs/common';
+import { Role } from './enums/role.enum';
 
-// 1. Define an interface for the payload to avoid 'any'
+// 1. Update the interface to include chamberId
 interface JwtPayload {
   sub: string;
-  email: string;
-  role: string;
+  phone: string; // Using phone since your login uses phone, not email
+  role: Role;
+  chamberId: string; // Required for SaaS isolation
 }
 
 @Injectable()
@@ -15,17 +17,17 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     super({
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
       ignoreExpiration: false,
-      secretOrKey: 'SUPER_SECRET_KEY',
+      secretOrKey: 'SUPER_SECRET_KEY', // Ensure this matches your AuthService
     });
   }
 
-  // 2. Add the type to the payload and remove 'async' if you aren't using 'await'
-  // NestJS/Passport still handles this correctly even without the async keyword
+  // 2. The return value of validate() is what gets attached to req.user
   validate(payload: JwtPayload) {
     return {
       userId: payload.sub,
-      email: payload.email,
+      phone: payload.phone,
       role: payload.role,
+      chamberId: payload.chamberId,
     };
   }
 }

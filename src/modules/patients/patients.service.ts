@@ -10,9 +10,9 @@ import { Patient } from './entities/patient.entity';
 import { MedicalRecord } from './entities/medical-record.entity';
 import { SignupDto } from './dto/signup.dto';
 import { CreateMedicalRecordDto } from './dto/create-medical-record.dto';
-import * as bcrypt from 'bcrypt';
 import { unlink } from 'fs/promises';
 import { join } from 'path';
+import { v4 as uuid } from 'uuid';
 
 @Injectable()
 export class PatientsService {
@@ -23,6 +23,7 @@ export class PatientsService {
     private readonly medicalRecordRepository: Repository<MedicalRecord>,
   ) {}
 
+  // Replace your existing signup method with this, or update it:
   async signup(dto: SignupDto) {
     // 1. Check if patient already exists
     const existingPatient = await this.patientRepository.findOne({
@@ -33,23 +34,18 @@ export class PatientsService {
       throw new ConflictException('This phone number is already registered');
     }
 
-    // 2. Hash the password
-    const hashedPassword = await bcrypt.hash(dto.password, 10);
-
-    // 3. Create and Save
+    // 2. Create and Save
+    // REMOVE 'password' from this object. It does not exist in the Patient entity.
     const newPatient = this.patientRepository.create({
+      id: uuid(), // Manually generate the UUID here
       fullName: dto.fullName,
       phone: dto.phone,
-      password: hashedPassword,
     });
 
     const savedPatient = await this.patientRepository.save(newPatient);
 
-    // 4. Return user without password
-    // This creates a new object 'patientData' containing everything EXCEPT the password
     return {
       ...savedPatient,
-      password: undefined,
     };
   }
 

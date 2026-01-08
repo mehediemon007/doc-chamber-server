@@ -1,34 +1,33 @@
 import {
   Entity,
   Column,
-  PrimaryGeneratedColumn,
+  PrimaryColumn,
+  OneToMany,
   CreateDateColumn,
-  OneToMany, // <--- Add this
 } from 'typeorm';
-import { MedicalRecord } from './medical-record.entity'; // We will create this next
+import { Booking } from '../../bookings/entities/booking.entity';
+import { MedicalRecord } from './medical-record.entity';
 
 @Entity('patients')
 export class Patient {
-  @PrimaryGeneratedColumn('uuid')
+  @PrimaryColumn() // Use PrimaryColumn, not PrimaryGeneratedColumn
   id: string;
 
-  @Column()
+  @Column() // <--- IF THIS LINE IS MISSING, YOU GET THE ERROR
   fullName: string;
 
   @Column({ unique: true })
   phone: string;
 
-  @Column({ select: false })
-  password: string;
-
-  // --- NEW FIELDS FOR MEDICAL CONTEXT ---
   @Column({ nullable: true })
   bloodGroup: string;
 
   @Column('simple-array', { nullable: true })
   allergies: string[];
 
-  // RELATIONSHIP: Link to the new MedicalRecord table
+  @OneToMany(() => Booking, (booking) => booking.patient)
+  bookings: Booking[];
+
   @OneToMany(() => MedicalRecord, (record) => record.patient)
   medicalRecords: MedicalRecord[];
 
