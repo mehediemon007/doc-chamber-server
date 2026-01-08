@@ -27,6 +27,12 @@ export class MedicalRecord {
   @CreateDateColumn()
   visitedDate: Date;
 
+  @Column({ default: 'doctor' })
+  authorRole: 'doctor' | 'patient' | 'staff';
+
+  @Column({ nullable: true })
+  authorId: string; // ID of the person who uploaded it
+
   // Link back to the Patient
   @ManyToOne(() => Patient, (patient) => patient.medicalRecords)
   patient: Patient;
