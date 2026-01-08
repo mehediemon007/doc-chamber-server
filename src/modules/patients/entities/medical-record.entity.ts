@@ -4,6 +4,7 @@ import {
   PrimaryGeneratedColumn,
   ManyToOne,
   CreateDateColumn,
+  UpdateDateColumn,
 } from 'typeorm';
 import { Patient } from './patient.entity';
 
@@ -26,6 +27,9 @@ export class MedicalRecord {
 
   @CreateDateColumn()
   visitedDate: Date;
+
+  @UpdateDateColumn() // This is the magic line
+  updatedAt: Date;
 
   @Column({ default: 'doctor' })
   authorRole: 'doctor' | 'patient' | 'staff';

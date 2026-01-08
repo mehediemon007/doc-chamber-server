@@ -11,6 +11,8 @@ import { MedicalRecord } from './entities/medical-record.entity';
 import { SignupDto } from './dto/signup.dto';
 import { CreateMedicalRecordDto } from './dto/create-medical-record.dto';
 import * as bcrypt from 'bcrypt';
+import { unlink } from 'fs/promises';
+import { join } from 'path';
 
 @Injectable()
 export class PatientsService {
@@ -88,6 +90,72 @@ export class PatientsService {
     });
 
     return await this.medicalRecordRepository.save(record);
+  }
+
+  async deleteMedicalRecord(recordId: string): Promise<void> {
+    const record = await this.medicalRecordRepository.findOne({
+      where: { id: recordId },
+    });
+
+    if (!record) {
+      throw new NotFoundException('Medical record not found');
+    }
+
+    // 1. Delete physical files from the 'uploads' folder
+    if (record.reportFiles && record.reportFiles.length > 0) {
+      for (const filePath of record.reportFiles) {
+        try {
+          // We use join to get the absolute path
+          await unlink(join(process.cwd(), filePath));
+        } catch (err) {
+          // Log the error but don't stop the process (the file might have been moved or already deleted)
+          console.error(`Failed to delete file: ${filePath}`, err);
+        }
+      }
+    }
+
+    // 2. Delete the record from the database
+    await this.medicalRecordRepository.remove(record);
+  }
+
+  async deleteSpecificFile(
+    recordId: string,
+    fileName: string,
+  ): Promise<{ message: string; updatedAt: Date; remainingFiles: number }> {
+    const record = await this.medicalRecordRepository.findOne({
+      where: { id: recordId },
+    });
+
+    if (!record) {
+      throw new NotFoundException('Medical record not found');
+    }
+
+    const fileIndex = record.reportFiles.findIndex((path) =>
+      path.includes(fileName),
+    );
+
+    if (fileIndex === -1) {
+      throw new NotFoundException('File not found in this record');
+    }
+
+    const filePath = record.reportFiles[fileIndex];
+
+    try {
+      await unlink(join(process.cwd(), filePath));
+    } catch (err) {
+      console.error(`Physical file missing: ${filePath}`, err);
+    }
+
+    record.reportFiles.splice(fileIndex, 1);
+
+    // Save once and capture the result to get the new updatedAt
+    const updatedRecord = await this.medicalRecordRepository.save(record);
+
+    return {
+      message: 'File deleted successfully',
+      updatedAt: updatedRecord.updatedAt,
+      remainingFiles: updatedRecord.reportFiles.length,
+    };
   }
 
   async getPatientHistory(patientId: string) {
