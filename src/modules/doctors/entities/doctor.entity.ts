@@ -3,9 +3,13 @@ import {
   Column,
   PrimaryGeneratedColumn,
   CreateDateColumn,
-  OneToMany,
+  OneToOne,
+  JoinColumn,
+  ManyToMany,
+  JoinTable,
 } from 'typeorm';
-import { Chamber } from '../../chambers/entities/chamber.entity'; // Import Chamber
+import { User } from '../../users/entities/user.entity';
+import { Chamber } from '../../chambers/entities/chamber.entity';
 
 @Entity('doctors')
 export class Doctor {
@@ -16,22 +20,21 @@ export class Doctor {
   name: string;
 
   @Column()
-  specialty: string; // e.g., Cardiologist, Pediatrician
+  specialty: string;
 
   @Column({ unique: true })
-  bmdcRegistration: string; // Bangladesh Medical & Dental Council reg number
+  bmdcRegistration: string;
 
   @Column({ default: true })
   isActive: boolean;
 
-  @Column({ default: true })
-  isPrivate: boolean; // TRUE = Doctor's own chamber (Manage Serials), FALSE = External Clinic (View only)
+  @OneToOne(() => User, (user) => user.doctorProfile)
+  @JoinColumn()
+  user: User;
 
-  @OneToMany(() => Chamber, (chamber) => chamber.doctor)
+  @ManyToMany(() => Chamber, (chamber) => chamber.doctors)
+  @JoinTable({ name: 'doctor_chambers' })
   chambers: Chamber[];
-
-  @Column({ nullable: true })
-  externalSoftwareLink: string; // Optional: A place to put a link to the clinic's software
 
   @CreateDateColumn()
   createdAt: Date;

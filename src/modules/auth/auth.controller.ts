@@ -5,6 +5,7 @@ import {
   UseGuards,
   Param,
   BadRequestException,
+  ForbiddenException,
   Req,
 } from '@nestjs/common';
 import { Role } from './enums/role.enum';
@@ -42,23 +43,36 @@ export class AuthController {
   }
 
   /**
-   * PROTECTED: Admin (Owner) adds another Doctor or Staff to THEIR chamber.
-   * The 'chamberId' is extracted from the Admin's JWT token via the Request.
-   * Route: POST /auth/staff/signup/:role
+   * PROTECTED: Admin OR Staff (Manager) adds another Doctor or Staff.
+   * Both Roles can now access this, but only for their OWN chamber.
    */
   @Post('staff/signup/:role')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(Role.ADMIN)
+  @Roles(Role.ADMIN, Role.STAFF) // <--- Added Staff here
   async registerStaff(
     @Param('role') role: Role,
     @Body() dto: RegisterStaffDto,
     @Req() req: AuthInterfaces.RequestWithUser,
   ) {
+    // 1. Validation: Prevent staff from creating an Admin
+    if (role === Role.ADMIN) {
+      throw new ForbiddenException(
+        'Staff members cannot create Admin accounts',
+      );
+    }
+
     if (role !== Role.DOCTOR && role !== Role.STAFF) {
       throw new BadRequestException('Invalid staff role provided in URL');
     }
 
-    // Automatically links new staff to the same chamber as the logged-in Admin
+    // 2. Security: Ensure the creator has a chamberId
+    if (!req.user.chamberId) {
+      throw new ForbiddenException(
+        'You must be assigned to a chamber to add staff',
+      );
+    }
+
+    // 3. Logic: Passes the creator's chamberId so the new doctor is "locked" to this clinic
     return this.authService.register(dto, role, req.user.chamberId);
   }
 

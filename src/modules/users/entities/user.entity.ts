@@ -1,6 +1,13 @@
-import { Entity, PrimaryGeneratedColumn, Column, ManyToOne } from 'typeorm';
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  ManyToOne,
+  OneToOne,
+} from 'typeorm';
 import { Role } from '../../auth/enums/role.enum';
 import { Chamber } from '../../chambers/entities/chamber.entity';
+import { Doctor } from '../../doctors/entities/doctor.entity';
 
 @Entity('users')
 export class User {
@@ -22,4 +29,8 @@ export class User {
 
   @ManyToOne(() => Chamber, (chamber) => chamber.members, { nullable: true })
   chamber: Chamber;
+
+  // This bi-directional link allows you to do: user.doctorProfile
+  @OneToOne(() => Doctor, (doctor) => doctor.user)
+  doctorProfile: Doctor;
 }

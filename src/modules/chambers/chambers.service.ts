@@ -17,7 +17,7 @@ export class ChambersService {
 
     const chamber = this.chamberRepository.create({
       ...chamberData,
-      doctor: { id: doctorId } as Doctor,
+      doctors: [{ id: doctorId } as Doctor],
     });
 
     return await this.chamberRepository.save(chamber);
@@ -51,7 +51,8 @@ export class ChambersService {
 
   async findByDoctor(doctorId: string) {
     return await this.chamberRepository.find({
-      where: { doctor: { id: doctorId } },
+      where: { doctors: { id: doctorId } },
+      relations: ['doctors'],
       order: { createdAt: 'DESC' },
     });
   }

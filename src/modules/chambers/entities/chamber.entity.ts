@@ -2,15 +2,14 @@ import {
   Entity,
   Column,
   PrimaryGeneratedColumn,
-  ManyToOne,
   OneToMany,
+  ManyToMany, // Use ManyToMany
   CreateDateColumn,
 } from 'typeorm';
 import { Doctor } from '../../doctors/entities/doctor.entity';
 import { Booking } from '../../bookings/entities/booking.entity';
 import { User } from '../../users/entities/user.entity';
 
-// Define status for the live tracking logic
 export enum DoctorTravelStatus {
   AT_HOME = 'at_home',
   ON_THE_WAY = 'on_the_way',
@@ -45,10 +44,10 @@ export class Chamber {
   travelStatus: DoctorTravelStatus;
 
   @Column({ type: 'decimal', precision: 10, scale: 8, nullable: true })
-  currentLat: number; // Updated live as the doctor moves
+  currentLat: number;
 
   @Column({ type: 'decimal', precision: 11, scale: 8, nullable: true })
-  currentLng: number; // Updated live as the doctor moves
+  currentLng: number;
 
   @Column({ nullable: true })
   estimatedArrivalTime: Date;
@@ -71,10 +70,13 @@ export class Chamber {
   @CreateDateColumn()
   createdAt: Date;
 
-  @ManyToOne(() => Doctor, (doctor) => doctor.chambers)
-  doctor: Doctor;
+  // FIX: Change to ManyToMany and rename to 'doctors' (plural)
+  // This matches the (chamber) => chamber.doctors in your Doctor entity
+  @ManyToMany(() => Doctor, (doctor) => doctor.chambers)
+  doctors: Doctor[];
 
-  @OneToMany('User', 'chamber')
+  // Note: Using string 'User' is fine, but using () => User is better for typing
+  @OneToMany(() => User, (user) => user.chamber)
   members: User[];
 
   @OneToMany(() => Booking, (booking) => booking.chamber)
