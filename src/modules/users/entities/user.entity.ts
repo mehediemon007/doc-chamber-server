@@ -31,6 +31,6 @@ export class User {
   chamber: Chamber;
 
   // This bi-directional link allows you to do: user.doctorProfile
-  @OneToOne(() => Doctor, (doctor) => doctor.user)
-  doctorProfile: Doctor;
+  @OneToOne(() => Doctor, (doctor) => doctor.user, { nullable: true })
+  doctorProfile?: Doctor;
 }

@@ -4,7 +4,7 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, FindOptionsWhere } from 'typeorm';
 import { Doctor } from './entities/doctor.entity';
 import { Chamber } from '../chambers/entities/chamber.entity';
 import { User } from '../users/entities/user.entity';
@@ -18,6 +18,11 @@ export class DoctorsService {
     private readonly doctorRepository: Repository<Doctor>,
   ) {}
 
+  /**
+   * Scenario 1 & 2: Create a profile.
+   * If userId is provided, it links immediately (Active).
+   * If not, it remains a "Lead" (Prospect).
+   */
   async create(
     createDoctorDto: CreateDoctorDto & { chamberId?: string },
   ): Promise<Doctor> {
@@ -25,7 +30,9 @@ export class DoctorsService {
 
     const newDoctor = this.doctorRepository.create({
       ...doctorData,
-      user: { id: userId } as User,
+      // Use undefined to satisfy DeepPartial and Scenario 1 logic
+      user: userId ? ({ id: userId } as User) : undefined,
+      hasJoinedPlatform: !!userId,
     });
 
     if (chamberId) {
@@ -35,24 +42,55 @@ export class DoctorsService {
     try {
       return await this.doctorRepository.save(newDoctor);
     } catch (err: unknown) {
-      // FIX: Ensure no 'any' types are returned and error is logged
       console.error('Doctor Creation Error:', err);
       const message =
         err instanceof Error ? err.message : 'Database operation failed';
-
       throw new BadRequestException(
-        'Could not create doctor profile. Ensure User ID or BMDC is unique.',
+        'Could not create doctor profile.',
         message,
       );
     }
   }
 
-  async findAllByChamber(chamberId: string): Promise<Doctor[]> {
+  /**
+   * Scenario 2: Transition a Lead to an Active Member
+   */
+  async linkUserAccount(doctorId: string, userId: string): Promise<Doctor> {
+    const doctor = await this.findOne(doctorId);
+
+    if (doctor.user) {
+      throw new BadRequestException(
+        'This doctor profile is already linked to a user.',
+      );
+    }
+
+    doctor.user = { id: userId } as User;
+    doctor.hasJoinedPlatform = true;
+
+    return await this.doctorRepository.save(doctor);
+  }
+
+  /**
+   * Finds all doctors in a chamber.
+   * Includes strict type checking for the where condition.
+   */
+  async findAllByChamber(
+    chamberId: string,
+    isPatient: boolean = false,
+  ): Promise<Doctor[]> {
+    // Define the query filter strictly using TypeORM types to avoid ESLint 'any' errors
+    const whereCondition: FindOptionsWhere<Doctor> = {
+      chambers: { id: chamberId },
+      isActive: true,
+    };
+
+    // If a patient is calling, only show doctors who have officially joined
+    if (isPatient) {
+      whereCondition.hasJoinedPlatform = true;
+    }
+
     return this.doctorRepository.find({
-      where: {
-        chambers: { id: chamberId },
-        isActive: true,
-      },
+      where: whereCondition,
       relations: ['chambers', 'user'],
     });
   }
@@ -76,6 +114,9 @@ export class DoctorsService {
     return this.doctorRepository.save(doctor);
   }
 
+  /**
+   * Admin-only: Find every active doctor in the system
+   */
   async findAll(): Promise<Doctor[]> {
     return this.doctorRepository.find({
       where: { isActive: true },

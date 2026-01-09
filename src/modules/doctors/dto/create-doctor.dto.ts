@@ -12,13 +12,13 @@ export class CreateDoctorDto {
   name: string;
 
   @IsString()
-  @IsNotEmpty()
-  specialty: string;
+  @IsOptional()
+  specialty?: string;
 
   @IsString()
-  @IsNotEmpty()
+  @IsOptional()
   @MinLength(5, { message: 'BMDC Registration number is too short' })
-  bmdcRegistration: string;
+  bmdcRegistration?: string;
 
   @IsString()
   @IsOptional()
@@ -33,6 +33,6 @@ export class CreateDoctorDto {
   bio?: string;
 
   @IsUUID()
-  @IsNotEmpty()
-  userId: string;
+  @IsOptional() // Allows creation without a user account
+  userId?: string;
 }

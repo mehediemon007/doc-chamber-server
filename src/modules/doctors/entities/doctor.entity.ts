@@ -19,18 +19,24 @@ export class Doctor {
   @Column()
   name: string;
 
-  @Column()
+  @Column({ nullable: true })
   specialty: string;
 
-  @Column({ unique: true })
+  @Column({ unique: true, nullable: true })
   bmdcRegistration: string;
 
   @Column({ default: true })
   isActive: boolean;
 
-  @OneToOne(() => User, (user) => user.doctorProfile)
+  @Column({ default: false })
+  hasJoinedPlatform: boolean; // Scenario 1: false, Scenario 2: true
+
+  @OneToOne(() => User, (user) => user.doctorProfile, {
+    nullable: true,
+    onDelete: 'SET NULL',
+  })
   @JoinColumn()
-  user: User;
+  user?: User;
 
   @ManyToMany(() => Chamber, (chamber) => chamber.doctors)
   @JoinTable({ name: 'doctor_chambers' })
