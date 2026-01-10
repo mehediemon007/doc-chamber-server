@@ -31,6 +31,19 @@ export class Doctor {
   @Column({ default: false })
   hasJoinedPlatform: boolean; // Scenario 1: false, Scenario 2: true
 
+  // Add these to your existing Doctor Entity
+  @Column({ type: 'decimal', precision: 10, scale: 8, nullable: true })
+  currentLat: number | null; // Add '| null' here
+
+  @Column({ type: 'decimal', precision: 11, scale: 8, nullable: true })
+  currentLng: number | null; // Add '| null' here
+
+  @Column({ default: false })
+  isHeadingToChamber: boolean;
+
+  @Column({ type: 'timestamp', nullable: true })
+  lastLocationUpdate: Date;
+
   @OneToOne(() => User, (user) => user.doctorProfile, {
     nullable: true,
     onDelete: 'SET NULL',

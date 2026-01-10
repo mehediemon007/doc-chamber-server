@@ -3,7 +3,7 @@ import {
   Column,
   PrimaryGeneratedColumn,
   OneToMany,
-  ManyToMany, // Use ManyToMany
+  ManyToMany,
   CreateDateColumn,
 } from 'typeorm';
 import { Doctor } from '../../doctors/entities/doctor.entity';
@@ -28,7 +28,8 @@ export class Chamber {
   @Column({ nullable: true })
   location: string;
 
-  // --- STATIC LOCATION (The Destination) ---
+  // --- STATIC LOCATION (The Fixed Destination) ---
+  // Using 'lat' and 'lng' to match your controller's access: targetChamber.lat
   @Column({ type: 'decimal', precision: 10, scale: 8, nullable: true })
   lat: number;
 
@@ -43,6 +44,10 @@ export class Chamber {
   })
   travelStatus: DoctorTravelStatus;
 
+  @Column({ default: 0 })
+  delayMinutes: number;
+
+  // These represent the doctor's current position if tracked at chamber level
   @Column({ type: 'decimal', precision: 10, scale: 8, nullable: true })
   currentLat: number;
 
@@ -70,15 +75,15 @@ export class Chamber {
   @CreateDateColumn()
   createdAt: Date;
 
-  // FIX: Change to ManyToMany and rename to 'doctors' (plural)
-  // This matches the (chamber) => chamber.doctors in your Doctor entity
+  // Relationship with Doctors
   @ManyToMany(() => Doctor, (doctor) => doctor.chambers)
   doctors: Doctor[];
 
-  // Note: Using string 'User' is fine, but using () => User is better for typing
+  // Relationship with Staff/Users
   @OneToMany(() => User, (user) => user.chamber)
   members: User[];
 
+  // Relationship with Appointments
   @OneToMany(() => Booking, (booking) => booking.chamber)
   bookings: Booking[];
 }

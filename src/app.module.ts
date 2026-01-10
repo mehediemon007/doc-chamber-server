@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { ScheduleModule } from '@nestjs/schedule';
 import { ConfigModule } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Patient } from './modules/patients/entities/patient.entity';
@@ -15,6 +16,7 @@ import { User } from './modules/users/entities/user.entity';
 
 @Module({
   imports: [
+    ScheduleModule.forRoot(),
     ConfigModule.forRoot(), // Loads .env
     TypeOrmModule.forRoot({
       type: 'postgres',
@@ -25,6 +27,7 @@ import { User } from './modules/users/entities/user.entity';
       database: process.env.DB_NAME || 'pulse_chamber_db',
       entities: [Doctor, Patient, User, Chamber, Booking, MedicalRecord], // Add your entities here
       synchronize: true, // Auto-creates table structure (Dev only)
+      dropSchema: true, // Drops schema on every app restart (Dev only)
     }),
     DoctorsModule,
     PatientsModule,
