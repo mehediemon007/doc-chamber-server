@@ -2,29 +2,23 @@ import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
 import { AppModule } from './app.module';
 import { ExpressAdapter } from '@nestjs/platform-express';
-import express from 'express';
+import express, { Request, Response } from 'express';
 
-// 1. Create the Express instance
 const server = express();
 
-async function bootstrap(expressInstance: any) {
-  const app = await NestFactory.create(
-    AppModule,
-    new ExpressAdapter(expressInstance),
-  );
+export const bootstrap = async () => {
+  const app = await NestFactory.create(AppModule, new ExpressAdapter(server));
 
   app.enableCors();
   app.useGlobalPipes(new ValidationPipe({ transform: true, whitelist: true }));
   app.setGlobalPrefix('api');
 
-  // For Vercel, we use .init() instead of .listen()
   await app.init();
-}
+  return server;
+};
 
-// 2. Start the bootstrap process
-bootstrap(server).catch((err) => {
-  console.error('Failed to bootstrap app', err);
-});
-
-// 3. CRITICAL: Export the server for Vercel to find
-export default server;
+// Use explicit types for Request and Response to satisfy TypeScript
+export default async (req: Request, res: Response) => {
+  await bootstrap();
+  server(req, res);
+};
