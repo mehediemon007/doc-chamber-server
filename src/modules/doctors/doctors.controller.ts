@@ -1,6 +1,7 @@
 import {
   Controller,
   Post,
+  Headers,
   Body,
   Get,
   Patch,
@@ -261,5 +262,19 @@ export class DoctorsController {
       message: `Calling Serial #${nextSerial}`,
       currentSerial: nextSerial,
     };
+  }
+
+  // Add to DoctorsController
+  @Patch('system/midnight-reset')
+  @Roles(Role.ADMIN, Role.STAFF, Role.PATIENT) // Keep it restricted
+  async triggerMidnightReset(@Headers('Authorization') authHeader: string) {
+    // 1. Security check: Ensure the caller is Vercel Cron
+    // In Vercel, CRON_SECRET is automatically compared if you use their recommended setup
+    if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+      throw new ForbiddenException('Only system cron can trigger this.');
+    }
+
+    await this.doctorsService.handleMidnightReset();
+    return { message: 'Midnight reset triggered successfully.' };
   }
 }

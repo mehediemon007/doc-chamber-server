@@ -1,0 +1,9 @@
+{
+  "version": 2,
+  "crons": [
+    {
+      "path": "/doctors/system/midnight-reset",
+      "schedule": "0 0 * * *"
+    }
+  ]
+}
