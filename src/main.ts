@@ -14,4 +14,6 @@ async function bootstrap() {
 }
 
 // Vercel handles the listener, so we just call bootstrap
-void bootstrap();
+bootstrap().catch((err) => {
+  console.error('Failed to bootstrap app', err);
+});
