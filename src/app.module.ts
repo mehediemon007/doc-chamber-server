@@ -21,9 +21,9 @@ import { BookingsModule } from './modules/bookings/bookings.module';
     TypeOrmModule.forRoot({
       type: 'postgres',
       url:
-        process.env.POSTGRES_URL ||
+        process.env.DATABASE_URL ||
         'postgres://postgres:password@localhost:5432/doc_chamber_db',
-      ssl: process.env.POSTGRES_URL ? { rejectUnauthorized: false } : false,
+      ssl: process.env.DATABASE_URL ? { rejectUnauthorized: false } : false,
       autoLoadEntities: true,
       // host: process.env.DB_HOST || 'localhost',
       // port: Number(process.env.DB_PORT) || 5432,
@@ -33,6 +33,10 @@ import { BookingsModule } from './modules/bookings/bookings.module';
       // entities: [Doctor, Patient, User, Chamber, Booking, MedicalRecord], // Add your entities here
       synchronize: true, // Auto-creates table structure (Dev only)
       dropSchema: process.env.NODE_ENV === 'development', // Drops schema on every app restart (Dev only)
+      extra: {
+        max: 10,
+        connectionTimeoutMillis: 30000,
+      },
     }),
     DoctorsModule,
     PatientsModule,
