@@ -14,17 +14,12 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { FilesInterceptor } from '@nestjs/platform-express';
-import { diskStorage } from 'multer';
-import { extname } from 'path';
+import { memoryStorage } from 'multer'; // Use memory, not disk
 import { Request as ExpressRequest } from 'express';
-
 import { PatientsService } from './patients.service';
 import { CreateMedicalRecordDto } from './dto/create-medical-record.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
-
-/* ============================
- * Types
- * ============================ */
+import { SupabaseStorageService } from '../common/supabase-storage.service'; // You'll create this
 
 interface AuthenticatedUser {
   userId: string;
@@ -36,61 +31,32 @@ interface RequestWithUser extends ExpressRequest {
   user: AuthenticatedUser;
 }
 
-/* ============================
- * Multer Storage Configuration
- * ============================ */
-
-// eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call
-const storageConfig = diskStorage({
-  destination: './uploads/medical-reports',
-
-  filename(
-    req: ExpressRequest,
-    file: Express.Multer.File,
-    callback: (error: NodeJS.ErrnoException | null, filename: string) => void,
-  ): void {
-    const uniqueSuffix = `${Date.now()}-${Math.round(Math.random() * 1e9)}`;
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-member-access
-    const fileExt = extname(file.originalname);
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-    const filename = `${file.fieldname}-${uniqueSuffix}${fileExt}`;
-
-    callback(null, filename);
-  },
-} as any);
-
-/* ============================
- * Controller
- * ============================ */
-
 @Controller('medical-records')
 export class MedicalRecordsController {
-  constructor(private readonly patientsService: PatientsService) {}
+  constructor(
+    private readonly patientsService: PatientsService,
+    private readonly supabaseStorage: SupabaseStorageService, // Inject Supabase helper
+  ) {}
 
   @Post()
   @UseGuards(JwtAuthGuard)
   @UseInterceptors(
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
     FilesInterceptor('files', 5, {
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-      storage: storageConfig,
-
+      storage: memoryStorage(), // Fixed: No more './uploads' folder
       fileFilter(
         req: ExpressRequest,
         file: Express.Multer.File,
         callback: (error: Error | null, acceptFile: boolean) => void,
       ): void {
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-member-access
         if (!/\.(jpg|jpeg|png|pdf)$/i.test(file.originalname)) {
           return callback(
             new BadRequestException('Only JPG, PNG, and PDF files are allowed'),
             false,
           );
         }
-
         callback(null, true);
       },
-    } as any),
+    }),
   )
   async create(
     @Body() dto: CreateMedicalRecordDto,
@@ -99,13 +65,17 @@ export class MedicalRecordsController {
   ) {
     const { role: authorRole, userId: authorId } = req.user;
 
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-return, @typescript-eslint/no-unsafe-member-access
-    const filePaths: string[] = files.map((file: any) => file.path) as string[];
+    // Upload each file to Supabase and get the Public URLs
+    const uploadPromises = files.map((file) =>
+      this.supabaseStorage.uploadFile(file, 'medical-reports'),
+    );
+
+    const filePublicUrls = await Promise.all(uploadPromises);
 
     return this.patientsService.addMedicalRecord(
       {
         ...dto,
-        reportFiles: filePaths,
+        reportFiles: filePublicUrls, // Save URLs in DB instead of local paths
       },
       authorRole,
       authorId,
@@ -127,8 +97,6 @@ export class MedicalRecordsController {
 
   @Delete(':id/file/:fileName')
   @UseGuards(JwtAuthGuard)
-  // 1. Remove @HttpCode(HttpStatus.NO_CONTENT) so we can send the JSON body
-  // 2. Change Promise<void> to match the Service's return type
   async removeFile(
     @Param('id') id: string,
     @Param('fileName') fileName: string,
