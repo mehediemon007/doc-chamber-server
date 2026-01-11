@@ -1,21 +1,37 @@
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
 import { AppModule } from './app.module';
+import { ExpressAdapter } from '@nestjs/platform-express';
+import express from 'express';
 
-async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+// Create the express instance
+const server = express();
 
-  app.useGlobalPipes(
-    new ValidationPipe({
-      whitelist: true, // Automatically removes properties not in the DTO
-      forbidNonWhitelisted: true, // Throws error if extra properties are sent
-      transform: true, // Automatically transforms payloads to DTO instances
-    }),
+export const createNextServer = async (expressInstance: any) => {
+  const app = await NestFactory.create(
+    AppModule,
+    new ExpressAdapter(expressInstance),
   );
 
   app.enableCors();
+  app.useGlobalPipes(new ValidationPipe({ transform: true, whitelist: true }));
 
-  await app.listen(process.env.PORT ?? 3000);
+  await app.init();
+  return app;
+};
+
+// This is for local development
+if (process.env.NODE_ENV !== 'production') {
+  async function bootstrap() {
+    const app = await NestFactory.create(AppModule);
+    app.enableCors();
+    app.useGlobalPipes(
+      new ValidationPipe({ transform: true, whitelist: true }),
+    );
+    await app.listen(3000);
+  }
+  bootstrap();
 }
 
-void bootstrap();
+// For Vercel: Export the express handler
+export default server;
