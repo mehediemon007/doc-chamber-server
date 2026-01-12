@@ -32,7 +32,7 @@ import { BookingsModule } from './modules/bookings/bookings.module';
       // database: process.env.DB_NAME || 'pulse_chamber_db',
       // entities: [Doctor, Patient, User, Chamber, Booking, MedicalRecord], // Add your entities here
       synchronize: true, // Auto-creates table structure (Dev only)
-      dropSchema: true, // Drops schema on every app restart (Dev only)
+      dropSchema: process.env.NODE_ENV === 'development', // Drops schema on every app restart (Dev only)
       extra: {
         max: 10,
         connectionTimeoutMillis: 30000,
