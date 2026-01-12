@@ -26,6 +26,10 @@ export class RegisterStaffDto {
   @IsNotEmpty()
   role: Role;
 
+  @IsOptional() // Optional here because staff registration won't need it
+  @IsString()
+  subscriptionToken?: string;
+
   @IsOptional()
   @IsUUID()
   chamberId?: string;

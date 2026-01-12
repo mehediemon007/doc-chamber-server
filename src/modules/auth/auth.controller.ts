@@ -1,13 +1,17 @@
 import {
   Controller,
   Post,
+  Headers,
   Body,
   UseGuards,
   Param,
   BadRequestException,
   ForbiddenException,
   Req,
+  Get,
+  UnauthorizedException,
 } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { Role } from './enums/role.enum';
 import { AuthService } from './auth.service';
 import { LoginDto } from './dto/login.dto';
@@ -20,7 +24,25 @@ import * as AuthInterfaces from './interfaces/request-with-user.interface';
 
 @Controller('auth')
 export class AuthController {
-  constructor(private authService: AuthService) {}
+  constructor(
+    private authService: AuthService,
+    private readonly configService: ConfigService,
+  ) {}
+
+  @Get('generate-beta-token') // This adds /generate-beta-token to the path
+  async generateToken(@Headers('x-admin-secret') secret: string) {
+    const adminSecret = this.configService.get<string>(
+      'SUPER_ADMIN_SECRET_KEY',
+    );
+
+    // For local testing if you haven't set the env yet:
+    // if (secret !== 'test_secret') ...
+
+    if (!secret || secret !== adminSecret) {
+      throw new UnauthorizedException('Invalid admin secret');
+    }
+    return this.authService.generateBetaToken();
+  }
 
   /**
    * SAAS ENTRY POINT: Doctor signs up to start their own chamber

@@ -2,6 +2,7 @@ import {
   Injectable,
   UnauthorizedException,
   BadRequestException,
+  ForbiddenException,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -11,6 +12,7 @@ import * as bcrypt from 'bcrypt';
 import { User } from '../users/entities/user.entity';
 import { Chamber } from '../chambers/entities/chamber.entity';
 import { Patient } from '../patients/entities/patient.entity';
+import { SubscriptionToken } from './entities/subscription-token.entity';
 import { Role } from './enums/role.enum';
 import { RegisterPatientDto } from './dto/register-patient.dto';
 import { RegisterStaffDto } from './dto/register-staff.dto';
@@ -18,11 +20,26 @@ import { RegisterStaffDto } from './dto/register-staff.dto';
 @Injectable()
 export class AuthService {
   constructor(
+    @InjectRepository(SubscriptionToken)
+    private tokenRepository: Repository<SubscriptionToken>,
     @InjectRepository(User)
     private usersRepository: Repository<User>,
     private jwtService: JwtService,
     private dataSource: DataSource,
   ) {}
+
+  // Helper to generate a new token for a beta user
+  async generateBetaToken(): Promise<string> {
+    const newToken = `BETA-${Math.random().toString(36).substring(2, 10).toUpperCase()}`;
+
+    const tokenEntry = this.tokenRepository.create({
+      tokenValue: newToken,
+      isUsed: false,
+    });
+
+    await this.tokenRepository.save(tokenEntry);
+    return newToken;
+  }
 
   /**
    * UNIFIED LOGIN
@@ -65,31 +82,58 @@ export class AuthService {
    * SAAS ENTRY POINT: Register Owner + Create Chamber
    */
   async registerOwner(dto: RegisterStaffDto) {
-    const { phone, password } = dto;
+    const { phone, password, subscriptionToken, chamberName, licenseNumber } =
+      dto;
 
+    // 1. Pre-check: Does user already exist? (Save resources)
     const existingUser = await this.usersRepository.findOne({
       where: { phone },
     });
-    if (existingUser) throw new BadRequestException('User exists');
+    if (existingUser)
+      throw new BadRequestException('User with this phone already exists');
 
+    // 2. Hash password before transaction (Keep transaction fast)
     const hashedPassword = await bcrypt.hash(password, 10);
 
+    // 3. Start the Transaction
     return await this.dataSource.transaction(async (manager) => {
-      const name: string = dto.chamberName || `${dto.phone}'s Chamber`;
+      // A. Verify & Lock the token inside the transaction
+      const tokenRecord = await manager.findOne(SubscriptionToken, {
+        where: { tokenValue: subscriptionToken, isUsed: false },
+        lock: { mode: 'pessimistic_write' }, // Prevents two people using same token at exact same time
+      });
 
+      if (!tokenRecord) {
+        throw new ForbiddenException('Invalid or expired beta token.');
+      }
+
+      // B. Create the Chamber
+      const name = chamberName || `${phone}'s Chamber`;
       const chamber = manager.create(Chamber, { name });
       const savedChamber = await manager.save(chamber);
 
+      // C. Create the User (Admin)
       const newUser = manager.create(User, {
         phone,
         password: hashedPassword,
         role: Role.ADMIN,
-        licenseNumber: dto.licenseNumber,
+        fullName: dto.fullName, // Don't forget fullName!
+        licenseNumber,
         chamber: savedChamber,
       });
-
       const savedUser = await manager.save(newUser);
-      return { ...savedUser, password: undefined, chamberId: savedChamber.id };
+
+      // D. CRITICAL: Mark token as used within the same transaction
+      tokenRecord.isUsed = true;
+      tokenRecord.usedByPhone = phone;
+      await manager.save(tokenRecord);
+
+      // Return successful response
+      return {
+        message: 'Chamber and Admin account created successfully',
+        userId: savedUser.id,
+        chamberId: savedChamber.id,
+      };
     });
   }
 

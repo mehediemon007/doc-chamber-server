@@ -9,12 +9,14 @@ import { JwtStrategy } from './jwt.strategy';
 // Import the entities used in AuthService
 import { User } from '../users/entities/user.entity';
 import { Chamber } from '../users/entities/chamber.entity';
+import { SubscriptionToken } from './entities/subscription-token.entity';
+import { ConfigModule } from '@nestjs/config';
 
 @Module({
   imports: [
     // 1. Register entities for this module to fix "UserRepository" dependency error
-    TypeOrmModule.forFeature([User, Chamber]),
-
+    TypeOrmModule.forFeature([User, Chamber, SubscriptionToken]),
+    ConfigModule,
     PassportModule,
     JwtModule.register({
       secret: 'SUPER_SECRET_KEY', // Recommended: use process.env.JWT_SECRET

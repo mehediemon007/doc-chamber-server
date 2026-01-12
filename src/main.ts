@@ -28,3 +28,21 @@ export default async (req: Request, res: Response) => {
   await bootstrap();
   server(req, res);
 };
+
+// For Local Development
+if (process.env.NODE_ENV !== 'production') {
+  // Use 'void' to satisfy the "no-floating-promises" rule
+  void (async () => {
+    try {
+      await bootstrap();
+      const port = process.env.PORT ?? 3000;
+      server.listen(port, () => {
+        console.log(
+          `🚀 Local Server listening on http://localhost:${port}/api`,
+        );
+      });
+    } catch (err) {
+      console.error('❌ Error during local bootstrap:', err);
+    }
+  })();
+}
