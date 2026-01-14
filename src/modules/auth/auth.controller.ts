@@ -9,6 +9,8 @@ import {
   ForbiddenException,
   Req,
   Get,
+  HttpCode,
+  HttpStatus,
   UnauthorizedException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
@@ -105,5 +107,11 @@ export class AuthController {
   @Post('login')
   async login(@Body() loginDto: LoginDto) {
     return this.authService.login(loginDto.identifier, loginDto.password);
+  }
+
+  @HttpCode(HttpStatus.OK)
+  @Post('refresh-token')
+  async refresh(@Body() body: { refreshToken: string }) {
+    return this.authService.refreshTokens(body.refreshToken);
   }
 }

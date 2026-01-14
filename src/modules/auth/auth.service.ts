@@ -17,6 +17,8 @@ import { Role } from './enums/role.enum';
 import { RegisterPatientDto } from './dto/register-patient.dto';
 import { RegisterStaffDto } from './dto/register-staff.dto';
 
+import { JwtPayload } from './interfaces/auth-payload.interface';
+
 @Injectable()
 export class AuthService {
   constructor(
@@ -82,6 +84,49 @@ export class AuthService {
       accessToken,
       refreshToken,
     };
+  }
+  /**
+   * REFRESH TOKEN logic for NextAuth callback
+   */
+  async refreshTokens(refreshToken: string) {
+    try {
+      // Verify the refresh token
+      const payload = await this.jwtService.verifyAsync<JwtPayload>(
+        refreshToken,
+        {
+          secret: process.env.JWT_REFRESH_SECRET,
+        },
+      );
+
+      // Fetch the user to get the latest data (role, fullName, etc.)
+      const user = await this.usersRepository.findOne({
+        where: { id: payload.sub },
+        relations: ['chamber'],
+      });
+
+      if (!user) throw new UnauthorizedException();
+
+      const newPayload = {
+        sub: user.id,
+        fullName: user.fullName,
+        phone: user.phone,
+        role: user.role,
+        chamberId: user.chamber?.id,
+      };
+
+      return {
+        accessToken: await this.jwtService.signAsync(newPayload, {
+          secret: process.env.JWT_ACCESS_SECRET,
+          expiresIn: '15m',
+        }),
+        refreshToken: await this.jwtService.signAsync(newPayload, {
+          secret: process.env.JWT_REFRESH_SECRET,
+          expiresIn: '7d',
+        }),
+      };
+    } catch {
+      throw new UnauthorizedException('Invalid Refresh Token');
+    }
   }
 
   /**
