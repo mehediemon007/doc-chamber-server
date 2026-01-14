@@ -44,9 +44,9 @@ export class AuthService {
   /**
    * UNIFIED LOGIN
    */
-  async login(phone: string, pass: string) {
+  async login(identifier: string, pass: string) {
     const user = await this.usersRepository.findOne({
-      where: { phone },
+      where: { phone: identifier },
       select: ['id', 'phone', 'password', 'role'],
       relations: ['chamber'],
     });
@@ -67,14 +67,19 @@ export class AuthService {
       chamberId: user.chamber?.id,
     };
 
+    const accessToken = await this.jwtService.signAsync(payload, {
+      secret: process.env.JWT_ACCESS_SECRET,
+      expiresIn: '15m',
+    });
+
+    const refreshToken = await this.jwtService.signAsync(payload, {
+      secret: process.env.JWT_REFRESH_SECRET,
+      expiresIn: '7d',
+    });
+
     return {
-      access_token: this.jwtService.sign(payload),
-      user: {
-        id: user.id,
-        phone: user.phone,
-        role: user.role,
-        chamberId: user.chamber?.id,
-      },
+      access_token: accessToken,
+      refresh_token: refreshToken,
     };
   }
 
@@ -130,8 +135,9 @@ export class AuthService {
 
       // Return successful response
       return {
+        ...savedUser,
         message: 'Chamber and Admin account created successfully',
-        userId: savedUser.id,
+        password: undefined,
         chamberId: savedChamber.id,
       };
     });

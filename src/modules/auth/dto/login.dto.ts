@@ -1,9 +1,10 @@
-import { IsString, IsNotEmpty, IsMobilePhone } from 'class-validator';
+import { IsString, IsNotEmpty } from 'class-validator';
+import { IsEmailOrPhone } from '../decorators/is-email-or-phone.decorator';
 
 export class LoginDto {
-  @IsMobilePhone()
+  @IsEmailOrPhone() // <--- Uses your custom logic
   @IsNotEmpty()
-  phone: string;
+  identifier: string;
 
   @IsString()
   @IsNotEmpty()
