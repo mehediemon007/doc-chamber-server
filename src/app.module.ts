@@ -21,8 +21,9 @@ import { BookingsModule } from './modules/bookings/bookings.module';
     TypeOrmModule.forRoot({
       type: 'postgres',
       url:
-        process.env.DATABASE_URL ||
-        'postgres://postgres:password@localhost:5432/doc_chamber_db',
+        process.env.NODE_ENV !== 'development'
+          ? process.env.DATABASE_URL
+          : 'postgres://postgres:emon1234@localhost:5433/doc_chamber_db',
       ssl: process.env.DATABASE_URL ? { rejectUnauthorized: false } : false,
       autoLoadEntities: true,
       // host: process.env.DB_HOST || 'localhost',

@@ -47,7 +47,7 @@ export class AuthService {
   async login(identifier: string, pass: string) {
     const user = await this.usersRepository.findOne({
       where: { phone: identifier },
-      select: ['id', 'phone', 'password', 'role'],
+      select: ['id', 'fullName', 'phone', 'password', 'role'],
       relations: ['chamber'],
     });
 
@@ -62,6 +62,7 @@ export class AuthService {
 
     const payload = {
       sub: user.id,
+      fullName: user.fullName,
       phone: user.phone,
       role: user.role,
       chamberId: user.chamber?.id,
