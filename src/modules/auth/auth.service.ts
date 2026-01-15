@@ -198,7 +198,7 @@ export class AuthService {
     role: Role,
     chamberId?: string,
   ) {
-    const { phone, password } = dto;
+    const { phone, password, fullName } = dto;
 
     const existingUser = await this.usersRepository.findOne({
       where: { phone },
@@ -212,6 +212,7 @@ export class AuthService {
       const userData: Partial<User> = {
         phone,
         password: hashedPassword,
+        fullName,
         role,
         chamber: chamberId ? ({ id: chamberId } as Chamber) : undefined,
       };

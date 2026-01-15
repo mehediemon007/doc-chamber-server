@@ -1,31 +1,33 @@
 import { ExtractJwt, Strategy } from 'passport-jwt';
 import { PassportStrategy } from '@nestjs/passport';
 import { Injectable } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { Role } from './enums/role.enum';
 
-// 1. Update the interface to include chamberId
 interface JwtPayload {
   sub: string;
-  phone: string; // Using phone since your login uses phone, not email
+  phone: string;
+  fullName: string;
   role: Role;
-  chamberId: string; // Required for SaaS isolation
+  chamberId: string;
 }
 
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
-  constructor() {
+  constructor(private configService: ConfigService) {
     super({
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
       ignoreExpiration: false,
-      secretOrKey: 'SUPER_SECRET_KEY', // Ensure this matches your AuthService
+      // FIX: use getOrThrow to ensure it's never undefined
+      secretOrKey: configService.getOrThrow<string>('JWT_ACCESS_SECRET'),
     });
   }
 
-  // 2. The return value of validate() is what gets attached to req.user
   validate(payload: JwtPayload) {
     return {
-      userId: payload.sub,
+      id: payload.sub,
       phone: payload.phone,
+      fullName: payload.fullName,
       role: payload.role,
       chamberId: payload.chamberId,
     };

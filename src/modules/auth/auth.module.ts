@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { JwtModule } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
 import { TypeOrmModule } from '@nestjs/typeorm'; // Import this
@@ -14,13 +15,17 @@ import { ConfigModule } from '@nestjs/config';
 
 @Module({
   imports: [
-    // 1. Register entities for this module to fix "UserRepository" dependency error
     TypeOrmModule.forFeature([User, Chamber, SubscriptionToken]),
     ConfigModule,
     PassportModule,
-    JwtModule.register({
-      secret: 'SUPER_SECRET_KEY', // Recommended: use process.env.JWT_SECRET
-      signOptions: { expiresIn: '1d' },
+    JwtModule.registerAsync({
+      imports: [ConfigModule],
+      inject: [ConfigService],
+      // Removed 'async' and 'await'
+      useFactory: (configService: ConfigService) => ({
+        secret: configService.getOrThrow<string>('JWT_ACCESS_SECRET'),
+        signOptions: { expiresIn: '15m' },
+      }),
     }),
   ],
   providers: [AuthService, JwtStrategy],

@@ -30,42 +30,19 @@ export default async (req: Request, res: Response) => {
 };
 
 // For Local Development
-// if (process.env.NODE_ENV !== 'production') {
-//   // Use 'void' to satisfy the "no-floating-promises" rule
-//   void (async () => {
-//     try {
-//       await bootstrap();
-//       const port = process.env.PORT ?? 3000;
-//       server.listen(port, () => {
-//         console.log(
-//           `🚀 Local Server listening on http://localhost:${port}/api`,
-//         );
-//       });
-//     } catch (err) {
-//       console.error('❌ Error during local bootstrap:', err);
-//     }
-//   })();
-// }
-
 if (process.env.NODE_ENV !== 'production') {
-  async function startLocal() {
+  // Use 'void' to satisfy the "no-floating-promises" rule
+  void (async () => {
     try {
-      // For local, we create a standard Nest Application directly
-      // This avoids the 'function-wrap' overhead and uses Nest's native listener
-      const app = await NestFactory.create(AppModule);
-
-      app.enableCors();
-      app.useGlobalPipes(
-        new ValidationPipe({ transform: true, whitelist: true }),
-      );
-      app.setGlobalPrefix('api');
-
+      await bootstrap();
       const port = process.env.PORT ?? 3000;
-      await app.listen(port);
-      console.log(`🚀 Fast Local Server: http://localhost:${port}/api`);
+      server.listen(port, () => {
+        console.log(
+          `🚀 Local Server listening on http://localhost:${port}/api`,
+        );
+      });
     } catch (err) {
-      console.error('❌ Error:', err);
+      console.error('❌ Error during local bootstrap:', err);
     }
-  }
-  void startLocal();
+  })();
 }
