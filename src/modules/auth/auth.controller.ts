@@ -31,7 +31,7 @@ export class AuthController {
     private readonly configService: ConfigService,
   ) {}
 
-  @Get('generate-beta-token') // This adds /generate-beta-token to the path
+  @Get('generate-subscription-token') // This adds /generate-beta-token to the path
   async generateToken(@Headers('x-admin-secret') secret: string) {
     const adminSecret = this.configService.get<string>(
       'SUPER_ADMIN_SECRET_KEY',
