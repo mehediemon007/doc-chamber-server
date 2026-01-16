@@ -5,12 +5,13 @@ import {
   IsEnum,
   IsOptional,
   IsUUID,
+  IsMobilePhone,
 } from 'class-validator';
 import { Role } from '../enums/role.enum';
 
 export class RegisterPatientDto {
   @IsNotEmpty()
-  @IsString()
+  @IsMobilePhone('bn-BD')
   phone: string;
 
   @IsNotEmpty()
