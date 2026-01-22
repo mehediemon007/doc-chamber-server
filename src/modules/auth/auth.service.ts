@@ -200,16 +200,24 @@ export class AuthService {
   ) {
     const { phone, password, fullName } = dto;
 
+    // 1. Standard Auth Check: Does a User record already exist?
     const existingUser = await this.usersRepository.findOne({
       where: { phone },
     });
-    if (existingUser) throw new BadRequestException('User exists');
+    if (existingUser) throw new BadRequestException('User already registered');
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
     return await this.dataSource.transaction(async (manager) => {
-      // 1. Prepare and Save the User (Auth record)
+      // 2. LOOKUP: Does a "Shadow Patient" exist from a guest booking?
+      const shadowPatient = await manager.findOne(Patient, {
+        where: { phone },
+      });
+
+      // 3. Prepare User Data
       const userData: Partial<User> = {
+        // If shadowPatient exists, use its ID. Otherwise, TypeORM/Postgres generates a new one.
+        id: shadowPatient ? shadowPatient.id : undefined,
         phone,
         password: hashedPassword,
         fullName,
@@ -221,23 +229,29 @@ export class AuthService {
         userData.licenseNumber = dto.licenseNumber;
       }
 
+      // 4. Save User (This effectively "promotes" the shadow ID to a real User ID)
       const newUser = manager.create(User, userData);
       const savedUser = await manager.save(newUser);
 
-      // 2. Create the Patient Profile record (Only if role is Patient)
       if (role === Role.PATIENT) {
-        // We cast the dto safely to access patient-specific fields
-        const patientDto = dto as RegisterPatientDto;
+        const shadowPatient = await manager.findOne(Patient, {
+          where: { phone },
+        });
 
-        // Construct record manually to ensure no unwanted fields (like password) are passed
-        const patientRecord = {
-          id: savedUser.id, // Shared UUID with User table
-          phone: savedUser.phone,
-          fullName: patientDto.fullName || 'Unnamed Patient',
-        };
-
-        const newPatient = manager.create(Patient, patientRecord);
-        await manager.save(Patient, newPatient);
+        if (shadowPatient) {
+          // LINK: Assign the new User to the existing Guest Patient
+          shadowPatient.user = savedUser;
+          shadowPatient.fullName = fullName; // Update name to their registered name
+          await manager.save(Patient, shadowPatient);
+        } else {
+          // CREATE: New patient profile linked to this user
+          const newPatient = manager.create(Patient, {
+            phone: savedUser.phone,
+            fullName: savedUser.fullName,
+            user: savedUser,
+          });
+          await manager.save(Patient, newPatient);
+        }
       }
 
       return { ...savedUser, password: undefined };

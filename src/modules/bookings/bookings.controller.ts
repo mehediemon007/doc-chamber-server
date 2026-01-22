@@ -24,15 +24,13 @@ export class BookingsController {
    * PATIENT/USER ACTION: Create a new booking.
    * Uses the logged-in user's ID to link the patient.
    */
-  @UseGuards(JwtAuthGuard)
   @Post()
   async create(
     @Body() createBookingDto: CreateBookingDto,
-    @Req() req: AuthInterfaces.RequestWithUser,
+    @Req() req: AuthInterfaces.RequestWithOptionalUser,
   ) {
-    // We pass both the userId (to identify the patient)
-    // and the chamberId from the body (to identify where they are booking)
-    return this.bookingsService.create(createBookingDto, req.user.userId);
+    const userId = req.user?.userId;
+    return this.bookingsService.create(createBookingDto, userId);
   }
 
   /**

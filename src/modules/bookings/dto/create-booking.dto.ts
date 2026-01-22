@@ -1,4 +1,11 @@
-import { IsNotEmpty, IsUUID, IsDateString } from 'class-validator';
+import {
+  IsNotEmpty,
+  IsOptional,
+  IsUUID,
+  IsString,
+  IsDateString,
+  Matches,
+} from 'class-validator';
 
 export class CreateBookingDto {
   @IsUUID()
@@ -12,4 +19,16 @@ export class CreateBookingDto {
   @IsDateString()
   @IsNotEmpty()
   bookingDate: string;
+
+  @IsOptional()
+  @IsString()
+  fullName?: string;
+
+  @IsOptional()
+  @Matches(/^\+8801[3-9]\d{8}$/, {
+    message:
+      'Phone number must be a valid Bangladesh number starting with +880 (e.g., +88017XXXXXXXX)',
+  })
+  @IsString()
+  phone?: string;
 }

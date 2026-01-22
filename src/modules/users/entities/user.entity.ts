@@ -8,6 +8,7 @@ import {
 import { Role } from '../../auth/enums/role.enum';
 import { Chamber } from '../../chambers/entities/chamber.entity';
 import { Doctor } from '../../doctors/entities/doctor.entity';
+import { Patient } from 'src/modules/patients/entities/patient.entity';
 
 @Entity('users')
 export class User {
@@ -36,4 +37,7 @@ export class User {
   // This bi-directional link allows you to do: user.doctorProfile
   @OneToOne(() => Doctor, (doctor) => doctor.user, { nullable: true })
   doctorProfile?: Doctor;
+
+  @OneToOne(() => Patient, (patient) => patient.user)
+  patient?: Patient;
 }

@@ -9,3 +9,12 @@ export interface RequestWithUser extends Request {
     chamberId?: string; // Add this field!
   };
 }
+
+export interface RequestWithOptionalUser extends Request {
+  user?: {
+    userId: string;
+    phone: string;
+    role: Role;
+    chamberId?: string;
+  };
+}
