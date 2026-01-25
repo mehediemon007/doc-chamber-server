@@ -5,6 +5,7 @@ import {
   OneToMany,
   ManyToMany,
   CreateDateColumn,
+  BeforeInsert,
 } from 'typeorm';
 import { Matches } from 'class-validator';
 import { Doctor } from '../../doctors/entities/doctor.entity';
@@ -29,7 +30,17 @@ export class Chamber {
   @Column()
   name: string;
 
-  @Column()
+  @BeforeInsert()
+  generateSlug() {
+    this.slug = this.name
+      .toLowerCase()
+      .trim()
+      .replace(/[^\w\s-]/g, '')
+      .replace(/[\s_-]+/g, '-')
+      .replace(/^-+|-+$/g, '');
+  }
+
+  @Column({ nullable: true })
   @Matches(/^\+8801[3-9]\d{8}$/, {
     message:
       'Phone number must be a valid Bangladesh number starting with +880 (e.g., +88017XXXXXXXX)',
