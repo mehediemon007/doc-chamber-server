@@ -23,6 +23,18 @@ export class ChambersService {
     return await this.chamberRepository.save(chamber);
   }
 
+  async findBySlug(slug: string) {
+    const chamber = await this.chamberRepository.findOne({
+      where: { slug },
+      select: ['id', 'name', 'location', 'phone'],
+    });
+
+    if (!chamber) {
+      throw new NotFoundException('Chamber not found');
+    }
+    return chamber;
+  }
+
   // The "Next Patient" Button Logic
   async callNextPatient(chamberId: string) {
     const chamber = await this.chamberRepository.findOne({

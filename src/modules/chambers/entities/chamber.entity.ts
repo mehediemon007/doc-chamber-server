@@ -6,6 +6,7 @@ import {
   ManyToMany,
   CreateDateColumn,
 } from 'typeorm';
+import { Matches } from 'class-validator';
 import { Doctor } from '../../doctors/entities/doctor.entity';
 import { Booking } from '../../bookings/entities/booking.entity';
 import { User } from '../../users/entities/user.entity';
@@ -22,8 +23,18 @@ export class Chamber {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
+  @Column({ unique: true })
+  slug: string;
+
   @Column()
   name: string;
+
+  @Column()
+  @Matches(/^\+8801[3-9]\d{8}$/, {
+    message:
+      'Phone number must be a valid Bangladesh number starting with +880 (e.g., +88017XXXXXXXX)',
+  })
+  phone: string;
 
   @Column({ nullable: true })
   location: string;

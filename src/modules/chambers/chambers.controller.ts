@@ -11,6 +11,11 @@ export class ChambersController {
     return this.chambersService.create(createChamberDto);
   }
 
+  @Get('by-slug/:slug')
+  async getChamberBySlug(@Param('slug') slug: string) {
+    return this.chambersService.findBySlug(slug);
+  }
+
   @Get('doctor/:doctorId')
   getByDoctor(@Param('doctorId') doctorId: string) {
     return this.chambersService.findByDoctor(doctorId);
