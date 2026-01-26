@@ -11,6 +11,7 @@ import { PatientsModule } from './modules/patients/patients.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { ChambersModule } from './modules/chambers/chambers.module';
 import { BookingsModule } from './modules/bookings/bookings.module';
+import { SchedulesModule } from './modules/schedules/schedules.module';
 // import { MedicalRecord } from './modules/patients/entities/medical-record.entity';
 // import { User } from './modules/users/entities/user.entity';
 
@@ -44,6 +45,7 @@ import { BookingsModule } from './modules/bookings/bookings.module';
     AuthModule,
     ChambersModule,
     BookingsModule,
+    SchedulesModule,
   ],
 })
 export class AppModule {}
