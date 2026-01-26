@@ -71,8 +71,8 @@ export class AuthController {
    * Route: POST /auth/signup
    */
   @Post('signup')
-  async signup(@Body() dto: RegisterPatientDto) {
-    return this.authService.register(dto, dto.role, dto.chamberId);
+  async patientSignup(@Body() dto: RegisterPatientDto) {
+    return this.authService.register(dto, Role.PATIENT, dto.chamberId);
   }
 
   /**
