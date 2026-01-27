@@ -208,20 +208,23 @@ export class AuthService {
     });
 
     if (existingUser) {
-      // We send an object so the frontend knows EXACTLY which field failed
       throw new BadRequestException({
-        field: 'phone',
-        message: 'This phone number is already used.',
-        error: 'Conflict',
+        errorMessage: {
+          phone: 'This phone number is already used.',
+        },
+        error: 'Bad Request',
+        statusCode: 400,
       });
     }
 
     // 2. Password Length Check (Extra safety if DTO misses it)
     if (password.length < 6) {
       throw new BadRequestException({
-        field: 'password',
-        message: 'Password is too short. Minimum 6 characters required.',
+        errorMessage: {
+          password: 'Password is too short. Minimum 6 characters required.',
+        },
         error: 'Bad Request',
+        statusCode: 400,
       });
     }
 
@@ -273,9 +276,12 @@ export class AuthService {
         console.error('Registration Error:', err);
 
         throw new BadRequestException({
-          field: 'system',
-          message:
-            'Something went wrong during registration. Please try again.',
+          errorMessage: {
+            system:
+              'Something went wrong during registration. Please try again.',
+          },
+          error: 'Bad Request',
+          statusCode: 400,
         });
       }
     });

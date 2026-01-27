@@ -1,5 +1,5 @@
 import { NestFactory } from '@nestjs/core';
-import { ValidationPipe } from '@nestjs/common';
+import { ValidationPipe, BadRequestException } from '@nestjs/common';
 import { AppModule } from './app.module';
 import { ExpressAdapter } from '@nestjs/platform-express';
 import express, { Request, Response } from 'express';
@@ -14,7 +14,27 @@ export const bootstrap = async () => {
 
     app.enableCors();
     app.useGlobalPipes(
-      new ValidationPipe({ transform: true, whitelist: true }),
+      new ValidationPipe({
+        whitelist: true,
+        transform: true,
+        exceptionFactory: (errors) => {
+          const result: Record<string, string> = {};
+
+          errors.forEach((error) => {
+            const constraints = error.constraints ?? {};
+            const messages = Object.values(constraints);
+
+            result[error.property] =
+              messages.length > 0 ? messages[0] : 'Invalid value';
+          });
+
+          return new BadRequestException({
+            errorMessage: result,
+            error: 'Bad Request',
+            statusCode: 400,
+          });
+        },
+      }),
     );
     app.setGlobalPrefix('api');
 
