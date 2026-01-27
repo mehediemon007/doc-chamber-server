@@ -193,6 +193,8 @@ export class AuthService {
    * UPDATED GENERAL REGISTRATION
    * Handles creating the Auth User and the Patient Profile in one transaction.
    */
+  // auth.service.ts
+
   async register(
     dto: RegisterPatientDto | RegisterStaffDto,
     role: Role,
@@ -200,61 +202,82 @@ export class AuthService {
   ) {
     const { phone, password, fullName } = dto;
 
-    // 1. Standard Auth Check: Does a User record already exist?
+    // 1. Specific Check for existing user
     const existingUser = await this.usersRepository.findOne({
       where: { phone },
     });
-    if (existingUser) throw new BadRequestException('User already registered');
+
+    if (existingUser) {
+      // We send an object so the frontend knows EXACTLY which field failed
+      throw new BadRequestException({
+        field: 'phone',
+        message: 'This phone number is already used.',
+        error: 'Conflict',
+      });
+    }
+
+    // 2. Password Length Check (Extra safety if DTO misses it)
+    if (password.length < 6) {
+      throw new BadRequestException({
+        field: 'password',
+        message: 'Password is too short. Minimum 6 characters required.',
+        error: 'Bad Request',
+      });
+    }
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
     return await this.dataSource.transaction(async (manager) => {
-      // 2. LOOKUP: Does a "Shadow Patient" exist from a guest booking?
-      const shadowPatient = await manager.findOne(Patient, {
-        where: { phone },
-      });
-
-      // 3. Prepare User Data
-      const userData: Partial<User> = {
-        // If shadowPatient exists, use its ID. Otherwise, TypeORM/Postgres generates a new one.
-        id: shadowPatient ? shadowPatient.id : undefined,
-        phone,
-        password: hashedPassword,
-        fullName,
-        role,
-        chamber: chamberId ? ({ id: chamberId } as Chamber) : undefined,
-      };
-
-      if ('licenseNumber' in dto) {
-        userData.licenseNumber = dto.licenseNumber;
-      }
-
-      // 4. Save User (This effectively "promotes" the shadow ID to a real User ID)
-      const newUser = manager.create(User, userData);
-      const savedUser = await manager.save(newUser);
-
-      if (role === Role.PATIENT) {
+      try {
         const shadowPatient = await manager.findOne(Patient, {
           where: { phone },
         });
 
-        if (shadowPatient) {
-          // LINK: Assign the new User to the existing Guest Patient
-          shadowPatient.user = savedUser;
-          shadowPatient.fullName = fullName; // Update name to their registered name
-          await manager.save(Patient, shadowPatient);
-        } else {
-          // CREATE: New patient profile linked to this user
-          const newPatient = manager.create(Patient, {
+        const newUser = manager.create(User, {
+          phone,
+          password: hashedPassword,
+          fullName,
+          role,
+          chamber: chamberId ? ({ id: chamberId } as Chamber) : undefined,
+        });
+
+        const savedUser = await manager.save(newUser);
+
+        if (role === Role.PATIENT) {
+          if (shadowPatient) {
+            shadowPatient.user = savedUser;
+            shadowPatient.fullName = fullName;
+            await manager.save(Patient, shadowPatient);
+          } else {
+            const newPatient = manager.create(Patient, {
+              phone: savedUser.phone,
+              fullName: savedUser.fullName,
+              user: savedUser,
+            });
+            await manager.save(Patient, newPatient);
+          }
+        }
+
+        // SUCCESS MESSAGE STRUCTURE
+        return {
+          success: true,
+          message: 'Account created successfully!',
+          user: {
+            id: savedUser.id,
             phone: savedUser.phone,
             fullName: savedUser.fullName,
-            user: savedUser,
-          });
-          await manager.save(Patient, newPatient);
-        }
-      }
+            role: savedUser.role,
+          },
+        };
+      } catch (err) {
+        console.error('Registration Error:', err);
 
-      return { ...savedUser, password: undefined };
+        throw new BadRequestException({
+          field: 'system',
+          message:
+            'Something went wrong during registration. Please try again.',
+        });
+      }
     });
   }
 }

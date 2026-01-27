@@ -10,20 +10,19 @@ import {
 import { Role } from '../enums/role.enum';
 
 export class RegisterPatientDto {
-  @IsNotEmpty()
+  @IsNotEmpty({ message: 'Full name is required' })
+  @IsString()
+  fullName: string;
+
+  @IsNotEmpty({ message: 'Phone number is required' })
   @Matches(/^\+8801[3-9]\d{8}$/, {
-    message:
-      'Phone number must be a valid Bangladesh number starting with +880 (e.g., +88017XXXXXXXX)',
+    message: 'Please provide a valid Bangladesh phone number (+8801xxxxxxxxx)',
   })
   phone: string;
 
-  @IsNotEmpty()
-  @MinLength(6)
+  @IsNotEmpty({ message: 'Password is required' })
+  @MinLength(6, { message: 'Password must be at least 6 characters long' })
   password: string;
-
-  @IsNotEmpty()
-  @IsString()
-  fullName: string;
 
   @IsEnum(Role)
   @IsNotEmpty()
