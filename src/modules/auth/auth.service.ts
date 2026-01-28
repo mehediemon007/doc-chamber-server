@@ -2,7 +2,6 @@ import {
   Injectable,
   UnauthorizedException,
   BadRequestException,
-  ForbiddenException,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -153,7 +152,13 @@ export class AuthService {
       where: { phone },
     });
     if (existingUser)
-      throw new BadRequestException('User with this phone already exists');
+      throw new BadRequestException({
+        errorMessage: {
+          phone: 'User with this phone already exists',
+        },
+        error: 'Bad Request',
+        statusCode: 400,
+      });
 
     // 2. Hash password before transaction (Keep transaction fast)
     const hashedPassword = await bcrypt.hash(password, 10);
@@ -167,7 +172,13 @@ export class AuthService {
       });
 
       if (!tokenRecord) {
-        throw new ForbiddenException('Invalid or expired beta token.');
+        throw new BadRequestException({
+          errorMessage: {
+            subscriptionToken: 'Invalid or expired beta token',
+          },
+          error: 'Bad Request',
+          statusCode: 400,
+        });
       }
 
       // B. Create the Chamber
