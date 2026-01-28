@@ -53,24 +53,12 @@ export class AuthService {
     });
 
     if (!user) {
-      throw new BadRequestException({
-        errorMessage: {
-          phone: 'No account found with this phone number.',
-        },
-        error: 'Not Found',
-        statusCode: 400,
-      });
+      throw new UnauthorizedException('Invalid phone number or password');
     }
 
     const isMatch = await bcrypt.compare(pass, user.password);
     if (!isMatch) {
-      throw new BadRequestException({
-        errorMessage: {
-          password: 'Incorrect password, Try again.',
-        },
-        error: 'Unauthorized',
-        statusCode: 400,
-      });
+      throw new UnauthorizedException('Invalid phone number or password');
     }
 
     const payload = {
