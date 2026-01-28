@@ -218,10 +218,13 @@ export class AuthService {
     }
 
     // 2. Password Length Check (Extra safety if DTO misses it)
-    if (password.length < 6) {
+    const passwordRegex = /(?=.*[A-Za-z])(?=.*\d)/;
+
+    if (password.length < 6 || !passwordRegex.test(password)) {
       throw new BadRequestException({
         errorMessage: {
-          password: 'Password is too short. Minimum 6 characters required.',
+          password:
+            'Password must be at least 6 characters, including one letter and one number.',
         },
         error: 'Bad Request',
         statusCode: 400,
