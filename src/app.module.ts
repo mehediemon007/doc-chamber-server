@@ -1,4 +1,10 @@
-import { Module } from '@nestjs/common';
+import {
+  Module,
+  NestModule,
+  MiddlewareConsumer,
+  RequestMethod,
+} from '@nestjs/common';
+import { TenantMiddleware } from './common/middleware/tenant.middleware';
 import { ScheduleModule } from '@nestjs/schedule';
 import { ConfigModule } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
@@ -12,6 +18,7 @@ import { AuthModule } from './modules/auth/auth.module';
 import { ChambersModule } from './modules/chambers/chambers.module';
 import { BookingsModule } from './modules/bookings/bookings.module';
 import { SchedulesModule } from './modules/schedules/schedules.module';
+import { TenantModule } from './common/multitenancy/tenant.module';
 // import { MedicalRecord } from './modules/patients/entities/medical-record.entity';
 // import { User } from './modules/users/entities/user.entity';
 
@@ -40,6 +47,7 @@ import { SchedulesModule } from './modules/schedules/schedules.module';
         connectionTimeoutMillis: 30000,
       },
     }),
+    TenantModule,
     DoctorsModule,
     PatientsModule,
     AuthModule,
@@ -48,4 +56,15 @@ import { SchedulesModule } from './modules/schedules/schedules.module';
     SchedulesModule,
   ],
 })
-export class AppModule {}
+export class AppModule implements NestModule {
+  configure(consumer: MiddlewareConsumer) {
+    consumer
+      .apply(TenantMiddleware)
+      // This tells NestJS: "Run this middleware for ANY route that
+      // starts with /chamber/ and has a slug segment"
+      .forRoutes(
+        { path: 'chamber/:chamberSlug', method: RequestMethod.ALL },
+        { path: 'chamber/:chamberSlug/*', method: RequestMethod.ALL },
+      );
+  }
+}
