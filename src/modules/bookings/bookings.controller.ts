@@ -13,7 +13,7 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { Role } from '../auth/enums/role.enum';
-import { TenantId } from 'src/common/decorators.ts/tenant-id.decorator';
+import { TenantId } from 'src/common/decorators/tenant-id.decorator';
 import * as AuthInterfaces from '../auth/interfaces/request-with-user.interface';
 
 @Controller('chamber/:chamberSlug/bookings') // Pro Pattern: Slug-based routing
